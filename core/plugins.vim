@@ -48,6 +48,10 @@ Plug 'vlime/vlime', {'rtp': 'vim/', 'for': 'lisp'}
 if executable('ccls')
   Plug 'jackguo380/vim-lsp-cxx-highlight'
 endif
+
+" C# specific tools
+Plug 'OmniSharp/omnisharp-vim'
+
 "}}
 
 "{{ Search related plugins
@@ -451,7 +455,7 @@ augroup END
 
 """""""""""""""""""""""""UltiSnips settings"""""""""""""""""""
 " Trigger configuration. Do not use <tab> if you use YouCompleteMe
-let g:UltiSnipsExpandTrigger='<c-j>'
+let g:UltiSnipsExpandTrigger='<tab>'
 
 " Do not look for SnipMate snippets
 let g:UltiSnipsEnableSnipMate = 0
