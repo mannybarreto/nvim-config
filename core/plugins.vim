@@ -52,6 +52,8 @@ endif
 " C# specific tools
 Plug 'OmniSharp/omnisharp-vim'
 
+" Godot semantic highlighting
+Plug 'calviken/vim-gdscript3'
 "}}
 
 "{{ Search related plugins
