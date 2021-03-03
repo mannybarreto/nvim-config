@@ -123,7 +123,6 @@ set pumheight=10  " Maximum number of items to show in popup menu
 set complete+=kspell complete-=w complete-=b complete-=u complete-=t
 
 set spelllang=en,cjk  " Spell languages
-set spellsuggest+=10  " The number of suggestions shown in the screen for z=
 
 " Align indent to next multiple value of shiftwidth. For its meaning,
 " see http://vim.1045645.n5.nabble.com/shiftround-option-td5712100.html
@@ -151,16 +150,13 @@ if executable('rg')
   set grepformat=%f:%l:%c:%m
 endif
 
-" Highlight groups for cursor color
-augroup cursor_color
-  autocmd!
-  autocmd ColorScheme * highlight Cursor cterm=bold gui=bold guibg=cyan guifg=black
-  autocmd ColorScheme * highlight Cursor2 guifg=red guibg=red
-augroup END
-
 " Set up cursor color and shape in various mode, ref:
 " https://github.com/neovim/neovim/wiki/FAQ#how-to-change-cursor-color-in-the-terminal
 set guicursor=n-v-c:block-Cursor/lCursor,i-ci-ve:ver25-Cursor2/lCursor2,r-cr:hor20,o:hor20
 
 set signcolumn=auto:2
+
+" Remove certain character from file name pattern matching
+set isfname-==
+set isfname-=,
 "}

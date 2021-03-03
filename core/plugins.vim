@@ -2,9 +2,14 @@ scriptencoding utf-8
 "{ Plugin installation
 "{{ Vim-plug related settings.
 " The root directory to install all plugins.
-let g:plugin_home=expand(stdpath('data') . '/plugged')
+let g:plug_home=expand(stdpath('data') . '/plugged')
 
-if empty(readdir(g:plugin_home))
+" Use fastgit for clone on Linux systems.
+if g:is_linux
+  let g:plug_url_format = 'https://hub.fastgit.org/%s.git'
+endif
+
+if empty(readdir(g:plug_home))
   augroup plug_init
     autocmd!
     autocmd VimEnter * PlugInstall --sync | quit |source $MYVIMRC
@@ -13,7 +18,7 @@ endif
 "}}
 
 "{{ Autocompletion related plugins
-call plug#begin(g:plugin_home)
+call plug#begin()
 " Auto-completion
 Plug 'Shougo/deoplete.nvim', { 'do': ':UpdateRemotePlugins' }
 " Language Server Protocol client
@@ -41,8 +46,10 @@ Plug 'jeetsukumaran/vim-pythonsense'
 Plug 'machakann/vim-swap'
 
 " IDE for Lisp
-" Plug 'kovisoft/slimv'
-Plug 'vlime/vlime', {'rtp': 'vim/', 'for': 'lisp'}
+if executable('sbcl')
+  " Plug 'kovisoft/slimv'
+  Plug 'vlime/vlime', {'rtp': 'vim/', 'for': 'lisp'}
+endif
 
 " C++ semantic highlighting
 if executable('ccls')
@@ -76,7 +83,7 @@ Plug 'haya14busa/vim-asterisk'
 if g:is_win
   Plug 'Yggdroot/LeaderF'
 else
-  Plug 'Yggdroot/LeaderF', { 'do': './install.sh' }
+  Plug 'Yggdroot/LeaderF', { 'do': ':LeaderfInstallCExtension' }
 endif
 
 " Another similar plugin is command-t
@@ -96,9 +103,9 @@ Plug 'ajmwagar/vim-deus'
 Plug 'lifepillar/vim-solarized8'
 Plug 'joshdick/onedark.vim'
 Plug 'KeitaNakamura/neodark.vim'
-Plug 'jsit/toast.vim'
 Plug 'sainnhe/edge'
 Plug 'sainnhe/sonokai'
+Plug 'sainnhe/gruvbox-material'
 
 if !exists('g:started_by_firenvim')
   " colorful status line and theme
@@ -169,6 +176,12 @@ Plug 'tpope/vim-repeat'
 " Show the content of register in preview window
 " Plug 'junegunn/vim-peekaboo'
 Plug 'jdhao/better-escape.vim'
+
+if g:is_mac
+  Plug 'lyokha/vim-xkbswitch'
+elseif g:is_win
+  Plug 'Neur1n/neuims'
+endif
 "}}
 
 "{{ Linting, formating
@@ -191,10 +204,7 @@ Plug 'mhinz/vim-signify'
 
 " Git command inside vim
 Plug 'tpope/vim-fugitive'
-Plug 'rhysd/git-messenger.vim'
-
-" Git commit browser
-Plug 'junegunn/gv.vim', { 'on': 'GV' }
+Plug 'APZelos/blamer.nvim'
 "}}
 
 "{{ Plugins for markdown writing
@@ -300,6 +310,9 @@ Plug 'tpope/vim-obsession'
 
 " Calculate statistics for visual selection
 Plug 'wgurecky/vimSum'
+if g:is_linux
+  Plug 'ojroques/vim-oscyank'
+endif
 call plug#end()
 "}}
 "}
@@ -364,21 +377,21 @@ call deoplete#custom#option({'camel_case': v:true,})
 let g:lsp_diagnostics_enabled = 1
 
 " show diagnostic signs
-let g:lsp_signs_enabled = 1
-let g:lsp_signs_error = {'text': '✗'}
-let g:lsp_signs_warning = {'text': '!'}
-let g:lsp_highlights_enabled = 0
+let g:lsp_diagnostics_signs_enabled = 1
+let g:lsp_diagnostics_signs_error = {'text': '✗'}
+let g:lsp_diagnostics_signs_warning = {'text': '!'}
+let g:lsp_diagnostics_highlights_enabled = 0
 
 " Do not use virtual text, they are far too obstrusive.
-let g:lsp_virtual_text_enabled = 0
+let g:lsp_diagnostics_virtual_text_enabled = 0
 " whether to echo a diagnostic message on statusline at cursor position
 let g:lsp_diagnostics_echo_cursor = 1
 " Whether to show diagnostic in floating window
 let g:lsp_diagnostics_float_cursor = 0
-" whether to enable highlight a symbol and its references
-let g:lsp_highlight_references_enabled = 1
-let g:lsp_preview_max_width = 80
 let g:lsp_diagnostics_float_delay = 100
+
+let g:lsp_preview_max_width = 80
+let g:lsp_work_done_progress_enabled = 1
 
 " set up pyls for vim-lsp
 if executable('pyls')
@@ -480,7 +493,7 @@ let g:semshi#mark_selected_nodes=0
 let g:semshi#error_sign=v:false
 
 """""""""""""""""""""""""" vlime settings """"""""""""""""""""""""""""""""
-command! -nargs=0 StartVlime call jobstart(printf("sbcl --load %s/vlime/lisp/start-vlime.lisp", g:plugin_home))
+command! -nargs=0 StartVlime call jobstart(printf("sbcl --load %s/vlime/lisp/start-vlime.lisp", g:plug_home))
 
 "}}
 
@@ -519,6 +532,8 @@ xmap #  <Plug>(asterisk-z#)
 """""""""""""""""""""""""""""LeaderF settings"""""""""""""""""""""
 " Do not use cache file
 let g:Lf_UseCache = 0
+" Refresh each time we call leaderf
+let g:Lf_UseMemoryCache = 0
 
 " Ignore certain files and directories when searching files
 let g:Lf_WildIgnore = {
@@ -536,8 +551,6 @@ endif
 
 " Only fuzzy-search files names
 let g:Lf_DefaultMode = 'NameOnly'
-
-let g:Lf_PopupColorscheme = 'gruvbox_default'
 
 " Popup window settings
 let g:Lf_PopupWidth = 0.5
@@ -593,22 +606,14 @@ let g:vista_echo_cursor = 0
 " Stay in current window when vista window is opened
 let g:vista_stay_on_open = 0
 
-augroup matchup_conf
+augroup vista_conf
   autocmd!
   " Double mouse click to go to a tag
   autocmd FileType vista* nnoremap <buffer> <silent>
         \ <2-LeftMouse> :<C-U>call vista#cursor#FoldOrJump()<CR>
-  " Quit Neovim if vista window is the only window
-  autocmd BufEnter * call s:close_vista_win()
 augroup END
 
 nnoremap <silent> <Space>t :<C-U>Vista!!<CR>
-
-function! s:close_vista_win() abort
-  if winnr('$') == 1 && getbufvar(bufnr(), '&filetype') ==# 'vista'
-    quit
-  endif
-endfunction
 "}}
 
 "{{ File editting
@@ -664,6 +669,9 @@ endif
 """"""""""""""""""""""""""""nvim-minipyank settings"""""""""""""""""""""""""
 nmap p <Plug>(miniyank-autoput)
 nmap P <Plug>(miniyank-autoPut)
+
+""""""""""""""""""""""""""""vim-xkbswitch settings"""""""""""""""""""""""""
+let g:XkbSwitchEnabled = 1
 "}}
 
 "{{ Linting and formating
@@ -702,6 +710,13 @@ let g:signify_vcs_list = [ 'git' ]
 
 " Change the sign for certain operations
 let g:signify_sign_change = '~'
+
+"""""""""""""""""""""""""vim-fugitive settings""""""""""""""""""""""""""""""
+nnoremap <silent> <leader>gc :Git commit<CR>
+nnoremap <silent> <leader>gs :Gstatus<CR>
+nnoremap <silent> <leader>gpl :Git pull<CR>
+" Note that to use bar literally, we need backslash it, see also `:h :bar`.
+nnoremap <silent> <leader>gpu :15split \| term git push
 "}}
 
 "{{ Markdown writing
@@ -738,9 +753,6 @@ endif
 """"""""""""""""""""""""vim-grammarous settings""""""""""""""""""""""""""""""
 if g:is_mac
   let g:grammarous#languagetool_cmd = 'languagetool'
-  nmap <leader>x <Plug>(grammarous-close-info-window)
-  nmap <c-n> <Plug>(grammarous-move-to-next-error)
-  nmap <c-p> <Plug>(grammarous-move-to-previous-error)
   let g:grammarous#disabled_rules = {
       \ '*' : ['WHITESPACE_RULE', 'EN_QUOTES', 'ARROWS', 'SENTENCE_WHITESPACE',
       \        'WORD_CONTAINS_UNDERSCORE', 'COMMA_PARENTHESIS_WHITESPACE',
@@ -749,8 +761,15 @@ if g:is_mac
       \        'PUNCTUATION_PARAGRAPH_END', 'MULTIPLICATION_SIGN', 'PRP_CHECKOUT',
       \        'CAN_CHECKOUT', 'SOME_OF_THE', 'DOUBLE_PUNCTUATION', 'HELL',
       \        'CURRENCY', 'POSSESSIVE_APOSTROPHE', 'ENGLISH_WORD_REPEAT_RULE',
-      \        'NON_STANDARD_WORD', 'AU'],
+      \        'NON_STANDARD_WORD', 'AU', 'DATE_NEW_YEAR'],
       \ }
+
+  augroup grammarous_map
+    autocmd!
+    autocmd FileType markdown nmap <buffer> <leader>x <Plug>(grammarous-close-info-window)
+    autocmd FileType markdown nmap <buffer> <c-n> <Plug>(grammarous-move-to-next-error)
+    autocmd FileType markdown nmap <buffer> <c-p> <Plug>(grammarous-move-to-previous-error)
+  augroup END
 endif
 
 """"""""""""""""""""""""unicode.vim settings""""""""""""""""""""""""""""""
@@ -770,8 +789,21 @@ omap s <Nop>
 "{{ LaTeX editting
 """"""""""""""""""""""""""""vimtex settings"""""""""""""""""""""""""""""
 if ( g:is_win || g:is_mac ) && executable('latex')
-  " Set up LaTeX flavor
-  let g:tex_flavor = 'latex'
+  function! SetServerName() abort
+    if has('win32')
+      let nvim_server_file = $TEMP . '/curnvimserver.txt'
+    else
+      let nvim_server_file = '/tmp/curnvimserver.txt'
+    endif
+    let cmd = printf('echo %s > %s', v:servername, nvim_server_file)
+    call system(cmd)
+  endfunction
+
+  augroup vimtex_common
+    autocmd!
+    autocmd FileType tex nmap <buffer> <F9> <plug>(vimtex-compile)
+    autocmd FileType tex call SetServerName()
+  augroup END
 
   " Deoplete configurations for autocompletion to work
   call deoplete#custom#var('omni', 'input_patterns', {
@@ -801,18 +833,18 @@ if ( g:is_win || g:is_mac ) && executable('latex')
     let g:vimtex_view_general_options = '-reuse-instance -forward-search @tex @line @pdf'
   endif
 
-  " The following code is adapted from https://gist.github.com/skulumani/7ea00478c63193a832a6d3f2e661a536.
   if g:is_mac
     " let g:vimtex_view_method = "skim"
     let g:vimtex_view_general_viewer = '/Applications/Skim.app/Contents/SharedSupport/displayline'
     let g:vimtex_view_general_options = '-r @line @pdf @tex'
 
-    " This adds a callback hook that updates Skim after compilation
-    let g:vimtex_compiler_callback_hooks = ['UpdateSkim']
+    augroup vimtex_mac
+      autocmd!
+      autocmd User VimtexEventCompileSuccess call UpdateSkim()
+    augroup END
 
-    function! UpdateSkim(status) abort
-      if !a:status | return | endif
-
+    " The following code is adapted from https://gist.github.com/skulumani/7ea00478c63193a832a6d3f2e661a536.
+    function! UpdateSkim() abort
       let l:out = b:vimtex.out()
       let l:src_file_path = expand('%:p')
       let l:cmd = [g:vimtex_view_general_viewer, '-r']
@@ -841,6 +873,7 @@ endif
 
 " Tabline settings
 let g:airline#extensions#tabline#enabled = 1
+let g:airline#extensions#tabline#fnamemod = ':t'
 let g:airline#extensions#tabline#formatter = 'unique_tail_improved'
 
 " Show buffer number for easier switching between buffer,
@@ -879,6 +912,12 @@ let g:airline#extensions#hunks#non_zero_only = 1
 
 " Speed up airline
 let g:airline_highlighting_cache = 1
+
+" The key in the following shortcode are the layout when we use a specific
+" input method mode. On my macOS, 0 means that we are trying to input Chinese,
+" and 1 means we are using English mode.
+" See also https://github.com/vim-airline/vim-airline/blob/master/autoload/airline/extensions/xkblayout.vim#L11
+let g:airline#extensions#xkblayout#short_codes = {'0': 'CN', '1': 'US'}
 
 """"""""""""""""""""""""""""vim-startify settings""""""""""""""""""""""""""""
 " Do not change working directory when opening files.
@@ -925,6 +964,9 @@ endif
 
 """"""""""""""""""""""""""""""firenvim settings""""""""""""""""""""""""""""""
 if exists('g:started_by_firenvim') && g:started_by_firenvim
+  if g:is_mac
+    set guifont=Iosevka\ Nerd\ Font:h18
+  endif
   " general options
   set laststatus=0 nonumber noruler noshowcmd
 
